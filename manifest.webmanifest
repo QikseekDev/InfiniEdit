@@ -11,14 +11,14 @@
   "theme_color": "#8A2BE2",
   "icons": [
     {
-      "src": "/favicon.png",
-      "sizes": "512x512",
+      "src": "/favicon.ico",
+      "sizes": "32x32",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/favicon.png",
-      "sizes": "512x512",
+      "src": "/favicon.ivo",
+      "sizes": "32x32",
       "type": "image/png",
       "purpose": "maskable"
     }
