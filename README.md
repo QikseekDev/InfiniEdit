@@ -1,11 +1,10 @@
-
 <div align="center">
 
 # ✨ InfiniEdit
 
 ### The Ultimate Save Editor for **Infinite Craft**
 
-Fast • Powerful • Offline • Open Source
+Fast • Powerful • Open Source
 
 <p>
   <a href="https://infiniedit.vercel.app">
