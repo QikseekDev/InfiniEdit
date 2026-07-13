@@ -80,6 +80,7 @@ Fast • Powerful • Open Source
 - Edit emojis
 - Delete elements
 - Multi-select editing
+- Live InfiniBrowser search & autocomplete when adding elements
 
 </td>
 </tr>
@@ -95,6 +96,8 @@ Fast • Powerful • Open Source
 - Import recipe lists
 - Search recipes
 - Missing ingredient detection
+- Auto-fetch recipes live from the InfiniBrowser API
+- Bulk-fill every missing recipe in one click
 
 </td>
 <td valign="top">
