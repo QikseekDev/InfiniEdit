@@ -3,7 +3,7 @@
   "serverInfo": {
     "name": "InfiniEdit",
     "version": "1.0.0",
-    "description": "Infinite Craft save editor exposing element and recipe management tools to browser-based AI agents via WebMCP."
+    "description": "Infinite Craft save editor."
   },
   "transport": {
     "type": "webmcp",
