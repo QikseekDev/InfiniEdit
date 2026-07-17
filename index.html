@@ -3951,11 +3951,17 @@ window.addEventListener("beforeunload", (e)=>{
    internal helper functions without polluting the global scope.
    ========================================================================= */
 (function registerWebMcpTools(){
-  if(!("modelContext" in document)){
+  // Chrome originally shipped WebMCP on navigator.modelContext (Feb 2026).
+  // The spec later moved it to document.modelContext. Chrome now deprecates
+  // navigator.modelContext in favor of document.modelContext but keeps it as
+  // a backward-compat alias during the transition. Some external scanners
+  // (e.g. Cloudflare's isitagentready.com, as of this writing) still check
+  // navigator.modelContext specifically. Check both, prefer the spec-current one.
+  const mc = document.modelContext || navigator.modelContext;
+  if(!mc){
     // WebMCP not supported in this browser — no-op.
     return;
   }
-  const mc = document.modelContext;
 
   function requireSave(){
     if(!state.save) throw new Error("No save is currently loaded in the editor.");
