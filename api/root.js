@@ -4,7 +4,7 @@ Browser-based save editor for the game Infinite Craft. Single-page, client-side 
 
 ## Summary
 
-InfiniEdit lets a user open an Infinite Craft \`.ic\` save file, edit elements and recipes, analyze the save (duplicates, dead ends, missing dependencies), visualize the recipe dependency tree as a graph, and export the result. All processing happens in the browser; no save data is uploaded to any server.
+InfiniEdit lets a user open an Infinite Craft \`.ic\` save file, edit elements and recipes, analyze the save (duplicates, dead ends, missing dependencies), visualize the recipe dependency tree as a graph, and export the result. All processing happens in the browser; no save data is uploaded to any server. It also exposes its editing actions as WebMCP tools so an in-browser AI agent can operate on the loaded save directly.
 
 ## Live instances
 
@@ -20,8 +20,8 @@ InfiniEdit lets a user open an Infinite Craft \`.ic\` save file, edit elements a
 ## Data model
 
 - Input/output format: \`.ic\` save files (Infinite Craft's native save format) and JSON export.
-- Elements: name, emoji, discovered flag.
-- Recipes: pairs of ingredient element IDs mapping to a result element ID.
+- Elements: id, name, emoji, discovery flag.
+- Recipes: pairs of ingredient element ids mapping to a result element id, stored per-element.
 
 ## Local persistence
 
@@ -38,22 +38,24 @@ No IndexedDB, no cookies, no server-side sessions.
 
 ## External network calls
 
-InfiniEdit makes outbound requests only for live recipe lookups against the third-party InfiniBrowser API, proxied through a CORS proxy:
+InfiniEdit makes outbound requests only for live recipe/autocomplete lookups against third-party services, proxied through a CORS proxy where needed:
 
-- Recipe lookup: \`https://infinibrowser.wiki/api/Recipe?id={name}\`
-- "Used in" lookup (paginated): \`https://infinibrowser.wiki/api/uses/?id={name}&offset={n}\`
-- Proxy: \`https://cors.qikseek.qzz.io/?url={encoded target}\`, response wrapped as \`{"contents": "..."}\` requiring an inner \`JSON.parse\`.
+- Recipe lookup: \`https://infinibrowser.wiki/api/Recipe?id={name}\` (via CORS proxy)
+- "Used in" lookup (paginated): \`https://infinibrowser.wiki/api/uses/?id={name}&offset={n}\` (via CORS proxy)
+- Autocomplete search: \`https://infinibrowser-ws-test.vercel.app/api/search?id={query}\`
+- CORS proxy: \`https://cors.qikseek.qzz.io/?url={encoded target}\`, response wrapped as \`{"contents": "..."}\` requiring an inner \`JSON.parse\`.
 
 These calls are used for: autocomplete when adding elements, auto-fetching missing recipes, bulk-filling missing recipes, and the inspector panel's "used in" data. They are optional/lazy — the editor is fully functional offline for save editing without them.
 
 ## Feature list
 
 - Save management: open/export \`.ic\`, export JSON, drag & drop, autosave, backup manager, merge saves, compare saves.
-- Element editor: browse, search, filter, multi-column sort, add/rename/delete elements, edit emoji, multi-select bulk editing, live autocomplete via InfiniBrowser.
+- Element editor: browse, search, filter, multi-column sort, add/rename/delete elements, edit emoji, multi-select bulk editing, live autocomplete.
 - Recipe editor: create/edit/delete recipes, import recipe lists, search, missing-ingredient detection, auto-fetch from InfiniBrowser API, bulk-fill missing recipes.
-- Analysis: duplicate detection, dead-end detection, reachability analysis, missing-dependency detection, ingredient statistics, discovery tracking.
+- Analysis: duplicate detection, exact-duplicate dedupe (merges elements with identical name/emoji/symbols, repoints their recipes, with confirmation and undo), dead-end detection, reachability analysis, missing-dependency detection, ingredient statistics, discovery tracking.
 - Dependency graph: interactive visualization, zoom/pan, re-layout, relationship highlighting, toggle labels/emojis, center-on-node. Disabled in low-end mode.
 - General: undo/redo, dark/light theme, responsive/mobile layout, resizable panels, toast notifications.
+- AI agent tools: exposes editor actions via WebMCP for in-browser AI agents (see below).
 
 ## Keyboard shortcuts
 
@@ -68,6 +70,23 @@ These calls are used for: autocomplete when adding elements, auto-fetching missi
 
 Shortcuts are suppressed while focus is in an input, textarea, or contenteditable element.
 
+## WebMCP tools
+
+When the browser supports WebMCP (\`document.modelContext\`, falling back to the legacy \`navigator.modelContext\` alias), InfiniEdit registers tools an AI agent can call against the currently loaded save. Spec: https://webmachinelearning.github.io/webmcp/
+
+| Tool | Read-only | Description |
+|---|---|---|
+| \`get_save_summary\` | Yes | Save name, element count, recipe count, discovered count. Call this first. |
+| \`search_elements\` | Yes | Substring search over element names; returns id, name, emoji. |
+| \`get_element\` | Yes | Full details for one element: its recipes and what uses it as an ingredient. |
+| \`add_element\` | No | Adds a new element (name, emoji, optional first-discovery flag). Does not fetch recipe data. |
+| \`add_recipe\` | No | Adds a recipe linking two existing ingredients to an existing result element. |
+| \`delete_element\` | No | Deletes an element by name or id and removes recipes referencing it. Destructive — agents are instructed to confirm with the user first. |
+| \`analyze_save\` | Yes | Runs the analyzer; returns counts of duplicate recipes, dead ends, unreachable elements, and missing dependencies. |
+| \`export_save\` | No | Triggers a browser download of the current save as \`.ic\`. |
+
+Elements can be referenced by name (case-insensitive, exact match preferred, falling back to substring match) or by numeric id in tool inputs.
+
 ## API / content negotiation
 
 \`GET /\` normally serves \`index.html\`. If the request's \`Accept\` header contains \`text/markdown\`, a Cloudflare URL Rewrite Rule internally rewrites the request to \`/api/root\` (the URL bar/visible URL does not change), which returns this document as \`text/markdown\`.
@@ -76,7 +95,7 @@ Shortcuts are suppressed while focus is in an input, textarea, or contenteditabl
 
 ## Privacy
 
-No save data, element data, or recipe data leaves the user's device except for the optional outbound lookups described above, which send only element names (not full save contents) to the InfiniBrowser API.
+No save data, element data, or recipe data leaves the user's device except for the optional outbound lookups described above, which send only element names (not full save contents) to third-party APIs. WebMCP tools operate purely on in-memory state already loaded in the browser and make no additional network calls themselves.
 
 ## License / contribution
 
