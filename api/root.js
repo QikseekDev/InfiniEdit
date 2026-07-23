@@ -1,10 +1,14 @@
 const MARKDOWN = `# InfiniEdit
 
-Browser-based save editor for the game Infinite Craft. Single-page, client-side only, no backend for core functionality. Unofficial fan project, not affiliated with Infinite Craft or its creators.
+InfiniEdit is a free software tool: a browser-based save-file editor for the sandbox crafting game Infinite Craft. It is a developer/utility application, not a game itself, and not affiliated with Infinite Craft or its creators. It is a single-page, client-side-only web app with no backend required for core functionality.
 
 ## Summary
 
-InfiniEdit lets a user open an Infinite Craft \`.ic\` save file, edit elements and recipes, analyze the save (duplicates, dead ends, missing dependencies), visualize the recipe dependency tree as a graph, and export the result. All processing happens in the browser; no save data is uploaded to any server. It also exposes its editing actions as WebMCP tools so an in-browser AI agent can operate on the loaded save directly.
+InfiniEdit lets a user open an Infinite Craft \`.ic\` save file, edit elements and recipes, analyze the save (duplicate recipes, dead ends, missing dependencies, unreachable elements), visualize the recipe dependency tree as an interactive graph, and export the result. All processing happens locally in the browser; no save data is uploaded to any server. It also exposes its editing actions as WebMCP tools so an in-browser AI agent can operate on the loaded save directly.
+
+## What InfiniEdit is not
+
+InfiniEdit is not Infinite Craft itself, not a game, not a puzzle, and not a "challenge." It does not generate new elements through AI combination the way Infinite Craft does. It is strictly an editor/inspector for save files that Infinite Craft (or compatible tools) produce.
 
 ## Live instances
 
@@ -19,7 +23,7 @@ InfiniEdit lets a user open an Infinite Craft \`.ic\` save file, edit elements a
 
 ## Data model
 
-- Input/output format: \`.ic\` save files (Infinite Craft's native save format) and JSON export.
+- Input/output format: \`.ic\` save files (Infinite Craft's native save format), plus JSON export.
 - Elements: id, name, emoji, discovery flag.
 - Recipes: pairs of ingredient element ids mapping to a result element id, stored per-element.
 
@@ -45,7 +49,7 @@ InfiniEdit makes outbound requests only for live recipe/autocomplete lookups aga
 - Autocomplete search: \`https://infinibrowser-ws-test.vercel.app/api/search?id={query}\`
 - CORS proxy: \`https://cors.qikseek.qzz.io/?url={encoded target}\`, response wrapped as \`{"contents": "..."}\` requiring an inner \`JSON.parse\`.
 
-These calls are used for: autocomplete when adding elements, auto-fetching missing recipes, bulk-filling missing recipes, and the inspector panel's "used in" data. They are optional/lazy — the editor is fully functional offline for save editing without them.
+These calls are used for: autocomplete when adding elements, auto-fetching missing recipes, bulk-filling missing recipes, and the inspector panel's "used in" data. They are optional and lazy — the editor is fully functional offline for save editing without them.
 
 ## Feature list
 
@@ -67,6 +71,7 @@ These calls are used for: autocomplete when adding elements, auto-fetching missi
 | Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z | Redo |
 | Delete | Delete selected element |
 | F2 | Rename selected element |
+| Escape | Close open modal or drawer |
 
 Shortcuts are suppressed while focus is in an input, textarea, or contenteditable element.
 
@@ -89,9 +94,11 @@ Elements can be referenced by name (case-insensitive, exact match preferred, fal
 
 ## API / content negotiation
 
-\`GET /\` normally serves \`index.html\`. If the request's \`Accept\` header contains \`text/markdown\`, a Cloudflare URL Rewrite Rule internally rewrites the request to \`/api/root\` (the URL bar/visible URL does not change), which returns this document as \`text/markdown\`.
+\`GET /\` normally serves \`index.html\`. If the request's \`Accept\` header contains \`text/markdown\`, a Cloudflare URL Rewrite Rule internally rewrites the request to \`/api/root\` (the URL bar/visible URL does not change), which returns this same document as \`text/markdown\`.
 
-\`/api/root\` also sets \`Vary: Accept\` and, when reached directly, the same content-negotiation headers as \`/\`.
+\`/api/root\` also sets \`Vary: Accept\` and, when reached directly, applies the same content-negotiation headers as \`/\`.
+
+This file (\`llms-full.txt\`) is served statically at the repository root and mirrors the content returned by \`/api/root\`, so crawlers that don't send \`Accept: text/markdown\` can still reach the full reference directly.
 
 ## Privacy
 
@@ -102,7 +109,7 @@ No save data, element data, or recipe data leaves the user's device except for t
 Open source. Issues and pull requests accepted via GitHub. No CLA or contribution restrictions documented beyond standard GitHub workflow.
 `;
 
-const ETAG = `"${Buffer.byteLength(MARKDOWN).toString(16)}-${MARKDOWN.length}"`;
+const ETAG = `"${Buffer.byteLength(MARKDOWN, 'utf-8').toString(16)}-${MARKDOWN.length}"`;
 
 export default function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
