@@ -410,20 +410,6 @@ td.actions-cell .icon-btn{display:inline-flex;vertical-align:middle;margin-left:
 .modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
 .modal-row{display:flex;gap:10px;align-items:flex-end}
 .modal-row>div{flex:1}
-/* ---- AI Help chat ---- */
-.ai-chat{display:flex;flex-direction:column;height:min(56vh,480px)}
-.ai-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}
-.ai-msg{max-width:88%;padding:9px 12px;border-radius:var(--rad-md,10px);font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-.ai-msg.user{align-self:flex-end;background:var(--bg-3);color:var(--text-0)}
-.ai-msg.bot{align-self:flex-start;background:var(--bg-2);color:var(--text-1);border:1px solid var(--border)}
-.ai-msg.err{align-self:flex-start;background:rgba(220,60,60,.12);color:#e06a6a;border:1px solid rgba(220,60,60,.3)}
-.ai-msg code{background:var(--bg-4,rgba(127,127,127,.18));padding:1px 4px;border-radius:4px;font-family:var(--mono,monospace);font-size:12px}
-.ai-msg strong{color:var(--text-0)}
-.ai-hint{font-size:11px;color:var(--text-2);margin-bottom:8px}
-.ai-form{display:flex;gap:8px;margin-top:12px}
-.ai-form textarea{flex:1;resize:none;min-height:42px;max-height:120px}
-.ai-dots::after{content:"…";animation:aidots 1s steps(4,end) infinite}
-@keyframes aidots{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
 
 .emoji-input-row{display:flex;gap:8px}
 .emoji-input-row input{width:60px;text-align:center;font-size:18px;flex:none}
@@ -571,8 +557,10 @@ button.tbtn.icon-only{padding:7px 10px}
 .omenu-item.active{background:var(--accent-gradient);color:#04221d;box-shadow:0 0 0 4px var(--accent-glow),var(--shadow-sm)}
 .omenu-item.active:hover{filter:brightness(1.08)}
 
-@media (max-width:1080px){.overflow-item{display:none!important}.overflow-wrap{display:inline-flex}}
-@media (min-width:1081px){.overflow-wrap{display:none}}
+@media (max-width:1250px){.overflow-item{display:none!important}}
+@media (max-width:980px){.overflow-item-2{display:none!important}}
+@media (max-width:1250px){.overflow-wrap{display:inline-flex}}
+@media (min-width:1251px){.overflow-wrap{display:none}}
 
 /* =============================================================
    RESPONSIVE — TABLET / MOBILE PORTRAIT
@@ -647,3 +635,8 @@ table.elem-table td.tags-cell{max-width:180px}
 .recipe-vspacer{width:100%}
 
 body.lowend #graphpanel,body.lowend #graph-resizer{display:none!important}
+
+/* ---- Keyboard shortcuts modal ---- */
+.shortcut-list{display:flex;flex-direction:column;gap:8px}
+.shortcut-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.shortcut-row kbd{background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-family:inherit;font-size:.85em}

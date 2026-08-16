@@ -820,12 +820,29 @@ function editElement(id){
   });
 }
 
+/* Removes any recipe (on any item) that uses one of the given ids as an
+   ingredient. Called automatically before removing elements so recipes
+   never point at ingredients that no longer exist. Returns how many
+   recipes were removed, for the toast message. */
+function removeRecipesReferencing(ids){
+  const idSet = new Set(ids);
+  let removed = 0;
+  state.save.items.forEach(x=>{
+    if(!x.recipes || !x.recipes.length) return;
+    const before = x.recipes.length;
+    x.recipes = x.recipes.filter(r=>!r.some(rid=>idSet.has(rid)));
+    removed += before - x.recipes.length;
+  });
+  return removed;
+}
+
 function deleteElement(id, opts){
   opts = opts || {};
   const it = state.save.items.find(x=>x.id===id);
   if(!it) return;
   const usedIn = state.save.items.filter(x => (x.recipes||[]).some(r=>r.includes(id)));
-  const warnMsg = usedIn.length ? `<p class="small" style="color:var(--warn)">⚠ ${usedIn.length} recipe(s) reference this element as an ingredient. They will be left with a dangling/missing ingredient reference unless you also delete those recipes.</p>` : "";
+  const recipeCount = usedIn.reduce((n,x)=> n + x.recipes.filter(r=>r.includes(id)).length, 0);
+  const warnMsg = recipeCount ? `<p class="small muted">This will also remove ${recipeCount} recipe(s) that use it as an ingredient.</p>` : "";
   openModal({
     title: "Delete Element",
     bodyHtml: `<p>Delete <strong>${escapeHtml(it.emoji)} ${escapeHtml(it.text)}</strong> (id ${it.id})? This cannot be undone except via Undo.</p>${warnMsg}`,
@@ -833,12 +850,13 @@ function deleteElement(id, opts){
       {label:"Cancel", onClick: closeModal},
       {label:"Delete", danger:true, onClick: ()=>{
         pushHistory();
+        const removedRecipes = removeRecipesReferencing([id]);
         state.save.items = state.save.items.filter(x=>x.id!==id);
         if(state.selectedId === id) state.selectedId = null;
         commit();
         fullRender();
         closeModal();
-        toast("Deleted "+it.text, "success");
+        toast("Deleted "+it.text+(removedRecipes ? " and "+removedRecipes+" recipe(s) using it" : ""), "success");
       }}
     ]
   });
@@ -849,18 +867,19 @@ function bulkDelete(){
   const n = state.selectedIds.size;
   openModal({
     title: "Bulk Delete",
-    bodyHtml: `<p>Delete <strong>${n}</strong> selected element(s)? This cannot be undone except via Undo.</p>`,
+    bodyHtml: `<p>Delete <strong>${n}</strong> selected element(s)? Any recipes using them will also be removed. This cannot be undone except via Undo.</p>`,
     footerButtons: [
       {label:"Cancel", onClick: closeModal},
       {label:"Delete All", danger:true, onClick: ()=>{
         pushHistory();
+        const removedRecipes = removeRecipesReferencing([...state.selectedIds]);
         state.save.items = state.save.items.filter(x=>!state.selectedIds.has(x.id));
         state.selectedIds.clear();
         state.selectedId = null;
         commit();
         fullRender();
         closeModal();
-        toast("Deleted "+n+" elements", "success");
+        toast("Deleted "+n+" elements"+(removedRecipes ? " and "+removedRecipes+" recipe(s)" : ""), "success");
       }}
     ]
   });
@@ -3063,126 +3082,27 @@ window.addEventListener("drop", (e)=>{
 });
 
 
-/* =========================================================================
-   AI HELP — chat assistant (Cloudflare AI Search endpoint)
-   ========================================================================= */
-const AI_HELP_ENDPOINT = "https://4d3e8921-ed92-4644-b0b0-a2cf0eef5d52.search.ai.cloudflare.com/chat/completions";
-/* Edit this to change the assistant's persona / rules. */
-const AI_HELP_SYSTEM_PROMPT = [
-  "You are the built-in help assistant for InfiniEdit, a browser-based editor for Infinite Craft .ic save files.",
-  "Answer as if you are an experienced user sitting next to the person: give them the exact things to click, in order, using the labels they can actually see on screen.",
-  "Use short numbered steps. Name buttons, tabs, menus and fields exactly as they appear, and include keyboard shortcuts where they exist.",
-  "Never mention your sources, documents, retrieval, context, training data, or where the information came from.",
-  "Never mention WebMCP, tool names, function names, code, APIs, element ids, or anything about how the app is built.",
-  "Do not describe what you can or cannot see on the page. Do not say things like 'according to the documentation' or 'based on the page'.",
-  "No code blocks and no technical jargon unless the user explicitly asks for it.",
-  "If a step could destroy data, add one short warning line.",
-  "If you genuinely don't know how to do something in InfiniEdit, say so briefly and suggest the closest thing that does exist.",
-  "Respond only to the user's latest message."
-].join(" ");
-
-const aiHelpHistory = [];
-
-
-function aiFormat(text){
-  const esc = String(text)
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  return esc
-    .replace(/```([\s\S]*?)```/g, (m,c)=>"<code>"+c.trim()+"</code>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-}
-
-function openAiHelpModal(){
+/* keyboard shortcuts */
+const KEYBOARD_SHORTCUTS = [
+  {keys:"Ctrl/⌘ O", desc:"Open a save file"},
+  {keys:"Ctrl/⌘ S", desc:"Export .ic"},
+  {keys:"Ctrl/⌘ Z", desc:"Undo"},
+  {keys:"Ctrl/⌘ Y or Ctrl/⌘ Shift Z", desc:"Redo"},
+  {keys:"Delete", desc:"Delete selected element"},
+  {keys:"F2", desc:"Rename/edit selected element"},
+  {keys:"Ctrl/⌘ /", desc:"Show this shortcuts list"},
+  {keys:"Esc", desc:"Close a modal or menu"}
+];
+function openShortcutsModal(){
+  const rows = KEYBOARD_SHORTCUTS.map(s=>
+    `<div class="shortcut-row"><kbd>${escapeHtml(s.keys)}</kbd><span>${escapeHtml(s.desc)}</span></div>`
+  ).join("");
   openModal({
-    title: "✨ AI Help",
-    wide: true,
-    bodyHtml: `
-      <div class="ai-chat">
-        <div class="ai-hint">Ask anything about InfiniEdit — editing elements, recipes, saves and tools. Enter to send, Shift+Enter for a new line.</div>
-        <div class="ai-log" id="ai-log"></div>
-        <div class="ai-form">
-          <textarea class="field-input" id="ai-input" rows="1" placeholder="Ask a question…"></textarea>
-          <button class="tbtn primary" id="ai-send">Send</button>
-        </div>
-      </div>`,
-    footerButtons: [
-      {label:"Clear", onClick: ()=>{ aiHelpHistory.length = 0; const l=document.getElementById("ai-log"); if(l) l.innerHTML=""; }},
-      {label:"Close", onClick: closeModal}
-    ],
-    onMount: (overlay)=>{
-      const log = overlay.querySelector("#ai-log");
-      const input = overlay.querySelector("#ai-input");
-      const send = overlay.querySelector("#ai-send");
-      let busy = false;
-
-      function bubble(role, text){
-        const div = document.createElement("div");
-        div.className = "ai-msg " + role;
-        div.innerHTML = role === "user" ? aiFormat(text) : aiFormat(text);
-        log.appendChild(div);
-        log.scrollTop = log.scrollHeight;
-        return div;
-      }
-
-      aiHelpHistory.forEach(m => bubble(m.role === "user" ? "user" : "bot", m.content));
-      if(!aiHelpHistory.length){
-        bubble("bot", "Hi! I'm the InfiniEdit assistant. Ask me how to merge saves, fix missing dependencies, import recipes, or anything else about the editor.");
-      }
-
-      async function ask(){
-        const q = input.value.trim();
-        if(!q || busy) return;
-        input.value = "";
-        input.style.height = "auto";
-        bubble("user", q);
-        aiHelpHistory.push({role:"user", content:q});
-        busy = true; send.disabled = true;
-        const pending = bubble("bot", "");
-        pending.classList.add("ai-dots");
-        try{
-          const res = await fetch(AI_HELP_ENDPOINT, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ messages: [{role:"system", content: AI_HELP_SYSTEM_PROMPT}, ...aiHelpHistory.slice(-12)], stream: false })
-          });
-          if(!res.ok) throw new Error("Request failed (" + res.status + ")");
-          const data = await res.json();
-          const answer = (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || "";
-          pending.classList.remove("ai-dots");
-          if(!answer.trim()){
-            pending.className = "ai-msg err";
-            pending.textContent = "No answer returned. Try rephrasing your question.";
-          } else {
-            pending.innerHTML = aiFormat(answer);
-            aiHelpHistory.push({role:"assistant", content:answer});
-          }
-        }catch(err){
-          pending.classList.remove("ai-dots");
-          pending.className = "ai-msg err";
-          pending.textContent = "AI Help is unavailable right now: " + (err && err.message ? err.message : err);
-        }finally{
-          busy = false; send.disabled = false;
-          log.scrollTop = log.scrollHeight;
-          input.focus();
-        }
-      }
-
-      send.addEventListener("click", ask);
-      input.addEventListener("keydown", (e)=>{
-        if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); ask(); }
-      });
-      input.addEventListener("input", ()=>{
-        input.style.height = "auto";
-        input.style.height = Math.min(input.scrollHeight, 120) + "px";
-      });
-      setTimeout(()=>input.focus(), 30);
-    }
+    title: "⌨ Keyboard Shortcuts",
+    bodyHtml: `<div class="shortcut-list">${rows}</div>`,
+    footerButtons: [{label:"Close", onClick: closeModal}]
   });
 }
-document.getElementById("btn-ai-help").addEventListener("click", openAiHelpModal);
-
-/* keyboard shortcuts */
 window.addEventListener("keydown", (e)=>{
   const mod = e.ctrlKey || e.metaKey;
   if(mod && e.key.toLowerCase()==="o"){ e.preventDefault(); document.getElementById("file-input").click(); }
@@ -3191,11 +3111,13 @@ window.addEventListener("keydown", (e)=>{
   else if((mod && e.key.toLowerCase()==="y") || (mod && e.shiftKey && e.key.toLowerCase()==="z")){ e.preventDefault(); redo(); }
   else if(e.key === "Delete" && state.selectedId!=null && !isTyping(e.target)){ e.preventDefault(); deleteElement(state.selectedId); }
   else if(e.key === "F2" && state.selectedId!=null && !isTyping(e.target)){ e.preventDefault(); editElement(state.selectedId); }
-  else if(mod && e.key.toLowerCase()==="k"){ e.preventDefault(); if(document.getElementById("active-modal-overlay")) closeModal(); openAiHelpModal(); }
+  else if(mod && e.key === "/"){ e.preventDefault(); openShortcutsModal(); }
 });
 function isTyping(el){
   return el && (el.tagName==="INPUT" || el.tagName==="TEXTAREA" || el.isContentEditable);
 }
+const shortcutsBtnEl = document.getElementById("btn-shortcuts");
+if(shortcutsBtnEl) shortcutsBtnEl.addEventListener("click", openShortcutsModal);
 
 /* panel resizing */
 function makeResizer(handleId, panelId, side){
@@ -3535,6 +3457,16 @@ window.addEventListener("beforeunload", (e)=>{
       return { status: "exported" };
     }
   });
+
+/* Register service worker for offline support / installability. */
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("sw.js").catch(err=>{
+      console.error("Service worker registration failed:", err);
+    });
+  });
+}
+
 })();
 
 })();
