@@ -128,11 +128,15 @@
     <button class="tbtn" id="btn-undo" title="Undo">↶<span class="lbl">Undo</span><span class="kbd">⌘Z</span></button>
     <button class="tbtn" id="btn-redo" title="Redo">↷<span class="lbl">Redo</span><span class="kbd">⌘Y</span></button>
 
-    <!-- secondary tools -->
-    <div class="sep overflow-item"></div>
-    <button class="tbtn overflow-item" id="btn-merge" title="Merge another save">⤵<span class="lbl">Merge</span></button>
-    <button class="tbtn overflow-item" id="btn-compare" title="Compare with another save">⇄<span class="lbl">Compare</span></button>
-    <button class="tbtn overflow-item" id="btn-backups" title="Backups">🗂<span class="lbl">Backups</span></button>
+    <!-- secondary tools: tiered so the toolbar degrades gracefully instead of
+         dumping everything into the overflow menu at once. overflow-item-2
+         (Merge/Compare/Backups) is the core editing workflow and stays
+         visible down to a narrower width; overflow-item (the rest) is more
+         occasional/maintenance tooling and collapses earlier. -->
+    <div class="sep overflow-item-2"></div>
+    <button class="tbtn overflow-item-2" id="btn-merge" title="Merge another save">⤵<span class="lbl">Merge</span></button>
+    <button class="tbtn overflow-item-2" id="btn-compare" title="Compare with another save">⇄<span class="lbl">Compare</span></button>
+    <button class="tbtn overflow-item-2" id="btn-backups" title="Backups">🗂<span class="lbl">Backups</span></button>
     <button class="tbtn overflow-item" id="btn-import-recipes" title="Paste recipes like 'A + B = C'">📋<span class="lbl">Import Recipes</span></button>
     <button class="tbtn overflow-item" id="btn-api-lookup" title="Look up element on InfiniBrowser">🔍<span class="lbl">API Lookup</span></button>
     <button class="tbtn overflow-item" id="btn-dedupe" title="Merge elements with the exact same name, emoji, and symbols">🧹<span class="lbl">Dedupe</span></button>
@@ -153,7 +157,7 @@
         <button class="omenu-item" data-forward="btn-import-recipes">📋 Import Recipes</button>
         <button class="omenu-item" data-forward="btn-api-lookup">🔍 API Lookup</button>
         <button class="omenu-item" data-forward="btn-dedupe">🧹 Dedupe</button>
-        <button class="omenu-item" data-forward="btn-ai-help">✨ AI Help <span style="margin-left:auto;opacity:.6;font-weight:600">⌘K</span></button>
+        <button class="omenu-item" data-forward="btn-shortcuts">⌨ Shortcuts <span style="margin-left:auto;opacity:.6;font-weight:600">⌘/</span></button>
         <button class="omenu-item" data-forward="btn-about">❔ About</button>
       </div>
     </div>
@@ -163,7 +167,7 @@
     <button class="tbtn icon-only" id="btn-lowend" title="Low-end mode (disable graph)" aria-label="Toggle low-end mode" style="display:none">🐢</button>
     <button class="tbtn icon-only" id="btn-mobile-inspector" title="Inspector panel" aria-label="Open inspector panel">ℹ</button>
     <button class="tbtn icon-only" id="btn-about" title="About InfiniEdit" aria-label="About InfiniEdit" style="display:none">❔</button>
-    <button class="tbtn icon-only" id="btn-ai-help" title="AI Help (Ctrl/⌘ K)" aria-label="AI Help" style="display:none">✨</button>
+    <button class="tbtn icon-only" id="btn-shortcuts" title="Keyboard Shortcuts (Ctrl/⌘ /)" aria-label="Keyboard Shortcuts">⌨</button>
   </nav>
 
   <div id="mobile-backdrop"></div>
