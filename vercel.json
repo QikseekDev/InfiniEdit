@@ -1,6 +1,19 @@
 {
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-m4bpdDy8NTjHCRmRzKBHrI/87pF/6kI43yXPDJZs/bo='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://cors.qikseek.qzz.io https://infinibrowser-ws-test.vercel.app https://4d3e8921-ed92-4644-b0b0-a2cf0eef5d52.search.ai.cloudflare.com https://vitals.vercel-insights.com https://vitals.vercel-analytics.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
       "source": "/",
       "headers": [
         {
