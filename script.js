@@ -3210,7 +3210,7 @@ window.addEventListener("beforeunload", (e)=>{
   // Defer render until after first paint — keeps initial skeleton stable (CLS fix)
   requestAnimationFrame(()=>{
     fullRender();
-    document.getElementById("app").style.opacity="1";
+    document.getElementById("app").classList.add("loaded");
     if(auto && auto.items) toast("Restored your last session from autosave");
   });
 })();

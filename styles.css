@@ -71,11 +71,13 @@ input,select,textarea{font-family:var(--sans);font-size:16px}
 ::-webkit-scrollbar-track{background:0 0}
 ::-webkit-scrollbar-thumb{background:var(--bg-4);border-radius:var(--rad-full)}
 ::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
+*{scrollbar-width:thin;scrollbar-color:var(--bg-4) transparent}
 
 /* =============================================================
    APP SHELL
    ============================================================= */
-#app{display:flex;flex-direction:column;height:100vh;opacity:0;transition:opacity .18s ease}
+#app{display:flex;flex-direction:column;height:100vh;opacity:0;transform:translateY(10px);transition:opacity .32s var(--ease),transform .32s var(--ease)}
+#app.loaded{opacity:1;transform:none}
 
 /* --- skip link (accessibility) --- */
 .skip-link{
@@ -444,9 +446,10 @@ td.actions-cell .icon-btn{display:inline-flex;vertical-align:middle;margin-left:
 /* =============================================================
    DROPZONE
    ============================================================= */
-#dropzone-overlay{position:fixed;inset:0;background:rgba(45,220,194,.08);border:3px dashed var(--accent);z-index:5000;display:none;align-items:center;justify-content:center}
-#dropzone-overlay.active{display:flex}
-#dropzone-overlay .msg{background:var(--bg-1);padding:26px 40px;border-radius:var(--rad-lg);font-size:16px;color:var(--accent);border:1px solid var(--accent);font-weight:800;box-shadow:var(--shadow-lg)}
+#dropzone-overlay{position:fixed;inset:0;background:rgba(45,220,194,.08);border:3px dashed var(--accent);z-index:5000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .16s var(--ease)}
+#dropzone-overlay.active{opacity:1;pointer-events:auto}
+#dropzone-overlay .msg{background:var(--bg-1);padding:26px 40px;border-radius:var(--rad-lg);font-size:16px;color:var(--accent);border:1px solid var(--accent);font-weight:800;box-shadow:var(--shadow-lg);transform:scale(.94);transition:transform .16s var(--ease-spring)}
+#dropzone-overlay.active .msg{transform:scale(1)}
 
 .btn-text{background:0 0;border:none;color:var(--accent);cursor:pointer;font-size:12px;text-decoration:underline;padding:0;font-weight:600}
 .btn-text:hover{color:var(--text-0)}
