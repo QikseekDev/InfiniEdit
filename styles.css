@@ -57,6 +57,7 @@ body.light-theme #toolbar .brand .brand-icon{filter:invert(1)}
    ============================================================= */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body,html{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--bg-0)}
+body{position:fixed;inset:0;width:100%}
 body{
   background:var(--bg-0);color:var(--text-0);font-family:var(--sans);
   font-size:13.5px;line-height:1.45;overflow:hidden;-webkit-font-smoothing:antialiased;
