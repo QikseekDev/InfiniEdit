@@ -3,7 +3,7 @@
    (editing, analysis, graph view) runs client-side already; the only
    thing that needs the network is the optional live recipe lookup,
    which is left to fail naturally when offline rather than cached. */
-const CACHE_NAME = "infiniedit-shell-v2";
+const CACHE_NAME = "infiniedit-shell-v3";
 const SHELL_FILES = [
   "/",
   "/index.html",
