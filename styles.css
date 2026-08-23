@@ -147,7 +147,7 @@ button.tbtn .kbd{font-family:var(--mono);font-size:10px;color:var(--text-2);back
 }
 .panel-header h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--text-2);margin:0;font-weight:800;display:flex;align-items:center;gap:8px}
 .panel-header h2::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent-gradient);flex-shrink:0;box-shadow:0 0 8px var(--accent-glow)}
-.panel-body{flex:1;overflow-y:auto;padding:16px;contain:paint}
+.panel-body{flex:1;overflow-y:auto;padding:16px;contain:paint;overscroll-behavior:contain}
 #sidebar-left{width:284px;flex-shrink:0}
 #sidebar-right{width:304px;flex-shrink:0}
 #center{flex:1;min-width:200px;display:flex;flex-direction:column}
@@ -244,7 +244,7 @@ label.field-label:first-child{margin-top:0}
 #center-toolbar .grow{flex:1;min-width:140px}
 #center-content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;contain:paint}
 
-.table-wrap{flex:1;overflow:auto}
+.table-wrap{flex:1;overflow:auto;overscroll-behavior:contain}
 table.elem-table{width:100%;border-collapse:collapse;font-size:12.5px}
 table.elem-table thead th{
   position:sticky;top:0;background:var(--bg-2);text-align:left;padding:9px 12px;color:var(--text-2);
@@ -343,7 +343,7 @@ td.actions-cell .icon-btn{display:inline-flex;vertical-align:middle;margin-left:
 /* =============================================================
    RECIPES LIST
    ============================================================= */
-.recipe-table-wrap{flex:1;overflow:auto}
+.recipe-table-wrap{flex:1;overflow:auto;overscroll-behavior:contain}
 .recipe-row{display:grid;grid-template-columns:50px 1fr 28px 1fr 70px;gap:8px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--bg-2);font-size:12.5px;transition:background .12s var(--ease)}
 .recipe-row:hover{background:var(--bg-2)}
 .recipe-row .ing{display:flex;align-items:center;gap:6px;color:var(--text-0);overflow:hidden}
