@@ -77,7 +77,7 @@ input,select,textarea{font-family:var(--sans);font-size:16px}
 /* =============================================================
    APP SHELL
    ============================================================= */
-#app{display:flex;flex-direction:column;height:100vh;height:100dvh;opacity:0;transform:translateY(14px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;padding-top:env(safe-area-inset-top);opacity:0;transform:translateY(14px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
 #app.loaded{opacity:1;transform:none}
 
 /* --- skip link (accessibility) --- */
