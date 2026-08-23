@@ -625,9 +625,9 @@ button.tbtn.icon-only{padding:7px 10px}
 /* z-index / stacking (mobile drawers over toolbar) */
 #mainsplit{contain:none!important}
 #mobile-backdrop{z-index:35!important}
-#sidebar-left,#sidebar-right{z-index:60!important}
-#toolbar{position:relative;z-index:70!important}
-#btn-mobile-menu{position:relative;z-index:61}
+#sidebar-left,#sidebar-right{z-index:70!important}
+#toolbar{position:relative;z-index:60!important}
+#btn-mobile-menu{position:relative;z-index:71}
 
 /* row heights kept exact — must match virtualizeRows(..., 36, ...) in JS */
 table.elem-table tbody tr:not(.vspacer){height:36px}
