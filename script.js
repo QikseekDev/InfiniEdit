@@ -836,29 +836,104 @@ function removeRecipesReferencing(ids){
   return removed;
 }
 
+/* Given a root id about to be deleted, finds every other element that would become
+   uncraftable as a result — i.e. every one of its recipes ends up referencing an
+   already-doomed id — applied transitively (doomed -> makes dependents doomed -> ...).
+   Elements with zero recipes to begin with (base/manual elements) are never doomed. */
+function computeUnreachableCascade(rootId){
+  const doomed = new Set([rootId]);
+  let changed = true;
+  while(changed){
+    changed = false;
+    for(const it of state.save.items){
+      if(doomed.has(it.id)) continue;
+      if(!it.recipes || it.recipes.length===0) continue;
+      const stillCraftable = it.recipes.some(r=>!r.some(rid=>doomed.has(rid)));
+      if(!stillCraftable){ doomed.add(it.id); changed = true; }
+    }
+  }
+  doomed.delete(rootId);
+  return [...doomed];
+}
+
 function deleteElement(id, opts){
   opts = opts || {};
   const it = state.save.items.find(x=>x.id===id);
   if(!it) return;
   const usedIn = state.save.items.filter(x => (x.recipes||[]).some(r=>r.includes(id)));
   const recipeCount = usedIn.reduce((n,x)=> n + x.recipes.filter(r=>r.includes(id)).length, 0);
-  const warnMsg = recipeCount ? `<p class="small muted">This will also remove ${recipeCount} recipe(s) that use it as an ingredient.</p>` : "";
+  const ownRecipeCount = (it.recipes||[]).length;
+  const cascadeItems = computeUnreachableCascade(id)
+    .map(cid=>state.save.items.find(x=>x.id===cid))
+    .filter(Boolean);
+
+  const bodyHtml = `
+    <p>Delete <strong>${escapeHtml(it.emoji)} ${escapeHtml(it.text)}</strong> (id ${it.id})? This cannot be undone except via Undo.</p>
+    <div class="section" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+      <label style="display:flex;align-items:center;gap:8px;opacity:.65;cursor:not-allowed;">
+        <span class="checkbox-cell"><input type="checkbox" checked disabled></span>
+        <span class="small">Remove its own recipe${ownRecipeCount===1?"":"s"} (${ownRecipeCount} — automatic, the element can't exist without it)</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <span class="checkbox-cell"><input type="checkbox" id="del-strip-refs" checked></span>
+        <span class="small">Remove ${recipeCount} recipe(s) elsewhere that use it as an ingredient${usedIn.length?` (${usedIn.length} element${usedIn.length===1?"":"s"})`:""}</span>
+      </label>
+      ${cascadeItems.length ? `
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <span class="checkbox-cell"><input type="checkbox" id="del-cascade"></span>
+        <span class="small">Also delete ${cascadeItems.length} element${cascadeItems.length===1?"":"s"} that would become uncraftable as a result</span>
+      </label>
+      <button class="btn-text" id="del-advanced-toggle" style="align-self:flex-start;margin-top:2px;">Advanced: review which elements ▾</button>
+      <div class="stat-list" id="del-advanced-list" style="max-height:220px;overflow-y:auto;display:none;">
+        ${cascadeItems.map(x=>`<div class="stat-list-row">
+          <span class="k"><span class="checkbox-cell"><input type="checkbox" class="del-cascade-item" data-id="${x.id}" checked disabled></span> ${escapeHtml(x.emoji)} ${escapeHtml(x.text)}</span>
+          <span class="v muted">#${x.id}</span>
+        </div>`).join("")}
+      </div>` : ""}
+    </div>
+  `;
+
   openModal({
     title: "Delete Element",
-    bodyHtml: `<p>Delete <strong>${escapeHtml(it.emoji)} ${escapeHtml(it.text)}</strong> (id ${it.id})? This cannot be undone except via Undo.</p>${warnMsg}`,
+    wide: cascadeItems.length>0,
+    bodyHtml,
     footerButtons: [
       {label:"Cancel", onClick: closeModal},
       {label:"Delete", danger:true, onClick: ()=>{
+        const stripRefs = document.getElementById("del-strip-refs")?.checked ?? true;
+        const cascadeOn = document.getElementById("del-cascade")?.checked ?? false;
+        const cascadeIds = cascadeOn
+          ? [...document.querySelectorAll(".del-cascade-item")].filter(c=>c.checked).map(c=>Number(c.dataset.id))
+          : [];
         pushHistory();
-        const removedRecipes = removeRecipesReferencing([id]);
-        state.save.items = state.save.items.filter(x=>x.id!==id);
-        if(state.selectedId === id) state.selectedId = null;
+        const toDelete = new Set([id, ...cascadeIds]);
+        const removedRecipes = stripRefs ? removeRecipesReferencing([...toDelete]) : 0;
+        state.save.items = state.save.items.filter(x=>!toDelete.has(x.id));
+        if(toDelete.has(state.selectedId)) state.selectedId = null;
         commit();
         fullRender();
         closeModal();
-        toast("Deleted "+it.text+(removedRecipes ? " and "+removedRecipes+" recipe(s) using it" : ""), "success");
+        const extra = toDelete.size>1 ? `, ${toDelete.size-1} dependent element(s)` : "";
+        toast("Deleted "+it.text+extra+(removedRecipes ? " and "+removedRecipes+" recipe(s)" : ""), "success");
       }}
-    ]
+    ],
+    onMount: (overlay)=>{
+      const toggleBtn = overlay.querySelector("#del-advanced-toggle");
+      const list = overlay.querySelector("#del-advanced-list");
+      if(toggleBtn && list){
+        toggleBtn.onclick = ()=>{
+          const opening = list.style.display === "none";
+          list.style.display = opening ? "block" : "none";
+          toggleBtn.textContent = opening ? "Advanced: review which elements ▴" : "Advanced: review which elements ▾";
+        };
+      }
+      const cascadeCb = overlay.querySelector("#del-cascade");
+      if(cascadeCb){
+        cascadeCb.onchange = ()=>{
+          overlay.querySelectorAll(".del-cascade-item").forEach(c=>{ c.checked = cascadeCb.checked; c.disabled = !cascadeCb.checked; });
+        };
+      }
+    }
   });
 }
 
@@ -3210,7 +3285,7 @@ window.addEventListener("beforeunload", (e)=>{
   // Defer render until after first paint — keeps initial skeleton stable (CLS fix)
   requestAnimationFrame(()=>{
     fullRender();
-    document.getElementById("app").classList.add("loaded");
+    document.getElementById("app").style.opacity="1";
     if(auto && auto.items) toast("Restored your last session from autosave");
   });
 })();
