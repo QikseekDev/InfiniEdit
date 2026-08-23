@@ -56,7 +56,7 @@ body.light-theme #toolbar .brand .brand-icon{filter:invert(1)}
    RESET / BASE
    ============================================================= */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body,html{height:100%;margin:0;overscroll-behavior:none}
+body,html{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--bg-0)}
 body{
   background:var(--bg-0);color:var(--text-0);font-family:var(--sans);
   font-size:13.5px;line-height:1.45;overflow:hidden;-webkit-font-smoothing:antialiased;
@@ -76,7 +76,7 @@ input,select,textarea{font-family:var(--sans);font-size:16px}
 /* =============================================================
    APP SHELL
    ============================================================= */
-#app{display:flex;flex-direction:column;height:100vh;opacity:0;transform:translateY(14px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;opacity:0;transform:translateY(14px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
 #app.loaded{opacity:1;transform:none}
 
 /* --- skip link (accessibility) --- */
