@@ -2135,11 +2135,54 @@ document.getElementById("graph-relayout").onclick = ()=>{
 /* =========================================================================
    API LOOKUP: Fetch recipes from infinibrowser.wiki
    ========================================================================= */
+/* Local backup of recipes, stored in recipe.json next to the page. It is keyed
+   by element name and each value has the same shape as the InfiniBrowser
+   response ({steps:[{a,b,result}], missing:[]}), so it can be used directly.
+   Loaded once and cached; a failed load is retried on the next lookup. */
+let backupRecipesPromise = null;
+function loadBackupRecipes(){
+  if(!backupRecipesPromise){
+    backupRecipesPromise = fetch("recipe.json", {cache:"no-cache"})
+      .then(r=>{
+        if(!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .catch(err=>{
+        console.error("Could not load recipe.json backup:", err);
+        backupRecipesPromise = null;
+        return {};
+      });
+  }
+  return backupRecipesPromise;
+}
+
+async function lookupBackupSteps(name){
+  const backup = await loadBackupRecipes();
+  const key = name.trim().toLowerCase();
+  const hitKey = Object.keys(backup).find(k => k.trim().toLowerCase() === key);
+  return hitKey !== undefined ? backup[hitKey] : null;
+}
+
+/* Tries the InfiniBrowser API first. If the request fails or returns no steps,
+   falls back to the local recipe.json backup. Returns an object shaped like the
+   API response; throws only when neither source has a usable answer. */
 async function fetchInfiniBrowserSteps(name){
-  const proxyUrl = `/api/proxy?url=${encodeURIComponent(`https://infinibrowser.wiki/api/Recipe?id=${encodeURIComponent(name)}`)}`;
-  const resp = await fetch(proxyUrl);
-  if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  return await resp.json();
+  let apiData = null;
+  try{
+    const proxyUrl = `/api/proxy?url=${encodeURIComponent(`https://infinibrowser.wiki/api/Recipe?id=${encodeURIComponent(name)}`)}`;
+    const resp = await fetch(proxyUrl);
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    apiData = await resp.json();
+    if(apiData && Array.isArray(apiData.steps) && apiData.steps.length>0) return apiData;
+  }catch(err){
+    console.warn(`InfiniBrowser API failed for "${name}", trying local backup:`, err.message);
+  }
+
+  const backup = await lookupBackupSteps(name);
+  if(backup && Array.isArray(backup.steps) && backup.steps.length>0) return backup;
+
+  if(apiData) return apiData; // API answered, just with no recipe
+  throw new Error("Not found in InfiniBrowser API or local recipe.json backup");
 }
 
 /* -------------------------------------------------------------------------
