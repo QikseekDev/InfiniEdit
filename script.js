@@ -2136,12 +2136,10 @@ document.getElementById("graph-relayout").onclick = ()=>{
    API LOOKUP: Fetch recipes from infinibrowser.wiki
    ========================================================================= */
 async function fetchInfiniBrowserSteps(name){
-  const proxyUrl = `https://cors.qikseek.qzz.io/?url=${encodeURIComponent(`https://infinibrowser.wiki/api/Recipe?id=${encodeURIComponent(name)}`)}`;
+  const proxyUrl = `/api/proxy?url=${encodeURIComponent(`https://infinibrowser.wiki/api/Recipe?id=${encodeURIComponent(name)}`)}`;
   const resp = await fetch(proxyUrl);
   if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const wrapper = await resp.json();
-  // cors.qikseek wraps response in {contents: "..."}
-  return wrapper.contents ? JSON.parse(wrapper.contents) : wrapper;
+  return await resp.json();
 }
 
 /* -------------------------------------------------------------------------
@@ -2156,11 +2154,10 @@ async function fetchInfiniBrowserSteps(name){
 const liveUsesCache = new Map(); // id -> {items:[], seenKeys:Set, offset:0, total:null, loading:false, error:null}
 
 async function fetchInfiniBrowserUses(name, offset){
-  const proxyUrl = `https://cors.qikseek.qzz.io/?url=${encodeURIComponent(`https://infinibrowser.wiki/api/uses/?id=${encodeURIComponent(name)}&offset=${offset}`)}`;
+  const proxyUrl = `/api/proxy?url=${encodeURIComponent(`https://infinibrowser.wiki/api/uses/?id=${encodeURIComponent(name)}&offset=${offset}`)}`;
   const resp = await fetch(proxyUrl);
   if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const wrapper = await resp.json();
-  return wrapper.contents ? JSON.parse(wrapper.contents) : wrapper;
+  return await resp.json();
 }
 
 function renderUsesSectionBody(id, name, emoji){
@@ -2324,7 +2321,8 @@ async function bulkFillAllRecipes(){
 async function searchInfiniBrowser(query, limit=5){
   if(!query || !query.trim()) return [];
   try{
-    const url = `https://infinibrowser-ws-test.vercel.app/api/search?id=${encodeURIComponent(query.trim())}`;
+    const target = `https://infinibrowser-ws-test.vercel.app/api/search?id=${encodeURIComponent(query.trim())}`;
+    const url = `/api/proxy?url=${encodeURIComponent(target)}`;
     const res = await fetch(url);
     if(!res.ok){
       console.warn("[InfiniBrowser] search request failed:", res.status);
