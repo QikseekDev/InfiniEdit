@@ -2156,17 +2156,101 @@ function loadBackupRecipes(){
   return backupRecipesPromise;
 }
 
+/* Big-file strategy: recipe.json is downloaded and parsed once, inside a Web
+   Worker, so even a very large file never freezes the page. The worker keeps
+   the parsed object in memory and answers lookups; only the single requested
+   entry is sent back. It is started at page load so the file is usually ready
+   before the first lookup. If Workers are unavailable (or blocked), it falls
+   back to loading on the main thread. */
+let backupWorkerPromise = null;
+function startBackupWorker(){
+  if(backupWorkerPromise) return backupWorkerPromise;
+  backupWorkerPromise = new Promise(resolve=>{
+    try{
+      if(typeof Worker !== "function" || typeof Blob !== "function") return resolve(null);
+      const url = new URL("recipe.json", location.href).href;
+      function workerMain(fileUrl){
+        let data = null, loading = null;
+        function load(){
+          if(data) return Promise.resolve(data);
+          if(!loading){
+            loading = fetch(fileUrl, {cache:"no-cache"})
+              .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+              .then(d=>{ data = d; return d; })
+              .catch(e=>{ loading = null; throw e; }); // retry on next lookup
+          }
+          return loading;
+        }
+        onmessage = async (e)=>{
+          const {id, name} = e.data;
+          try{
+            const d = await load();
+            const hit = d && typeof d === "object" && Object.prototype.hasOwnProperty.call(d, name);
+            postMessage({id, value: hit ? d[name] : null});
+          }catch(err){
+            postMessage({id, error: String((err && err.message) || err)});
+          }
+        };
+        load().catch(()=>{}); // warm up immediately
+      }
+      const blobUrl = URL.createObjectURL(new Blob(
+        ["(" + workerMain.toString() + ")(" + JSON.stringify(url) + ");"],
+        {type:"text/javascript"}
+      ));
+      const w = new Worker(blobUrl);
+      const pending = new Map();
+      let nextId = 1;
+      w.onmessage = (e)=>{
+        const p = pending.get(e.data.id);
+        if(!p) return;
+        pending.delete(e.data.id);
+        if(e.data.error) p.reject(new Error(e.data.error)); else p.resolve(e.data.value);
+      };
+      w.onerror = ()=>{
+        for(const p of pending.values()) p.reject(new Error("recipe worker crashed"));
+        pending.clear();
+        backupWorkerPromise = Promise.resolve(null); // use main-thread fallback from now on
+      };
+      resolve({ lookup: (name)=> new Promise((res, rej)=>{
+        const id = nextId++;
+        pending.set(id, {resolve:res, reject:rej});
+        w.postMessage({id, name});
+      })});
+    }catch(err){
+      console.warn("Recipe worker unavailable, using main thread:", err);
+      resolve(null);
+    }
+  });
+  return backupWorkerPromise;
+}
+startBackupWorker(); // warm up at startup
+
+/* Behaves like `jq '.["Zombie Chai"]' recipe.json`: the name is used as an
+   exact object key. Spaces are fine, and capitalization matters, so
+   "Zombie Chai" matches but "zombie chai" does not. Lookup is a hash-table
+   hit (O(1)), so it stays instant no matter how many recipes the file has. */
 async function lookupBackupSteps(name){
-  const backup = await loadBackupRecipes();
-  const key = name.trim().toLowerCase();
-  const hitKey = Object.keys(backup).find(k => k.trim().toLowerCase() === key);
-  return hitKey !== undefined ? backup[hitKey] : null;
+  const worker = await startBackupWorker();
+  if(worker){
+    try{ return await worker.lookup(name); }
+    catch(err){ console.error("Could not read recipe.json backup:", err); return null; }
+  }
+  const backup = await loadBackupRecipes(); // main-thread fallback
+  if(backup && typeof backup === "object" &&
+     Object.prototype.hasOwnProperty.call(backup, name)){
+    return backup[name];
+  }
+  return null;
 }
 
-/* Tries the InfiniBrowser API first. If the request fails or returns no steps,
-   falls back to the local recipe.json backup. Returns an object shaped like the
-   API response; throws only when neither source has a usable answer. */
+/* Checks the local recipe.json backup first (exact, case-sensitive key match,
+   like jq). Only if the backup has no usable steps does it call the
+   InfiniBrowser API. Returns an object shaped like the API response; throws
+   only when neither source has a usable answer. */
 async function fetchInfiniBrowserSteps(name){
+  const backup = await lookupBackupSteps(name);
+  if(backup && Array.isArray(backup.steps) && backup.steps.length>0) return backup;
+
   let apiData = null;
   try{
     const proxyUrl = `/api/proxy?url=${encodeURIComponent(`https://infinibrowser.wiki/api/Recipe?id=${encodeURIComponent(name)}`)}`;
@@ -2175,14 +2259,11 @@ async function fetchInfiniBrowserSteps(name){
     apiData = await resp.json();
     if(apiData && Array.isArray(apiData.steps) && apiData.steps.length>0) return apiData;
   }catch(err){
-    console.warn(`InfiniBrowser API failed for "${name}", trying local backup:`, err.message);
+    console.warn(`InfiniBrowser API failed for "${name}":`, err.message);
   }
 
-  const backup = await lookupBackupSteps(name);
-  if(backup && Array.isArray(backup.steps) && backup.steps.length>0) return backup;
-
   if(apiData) return apiData; // API answered, just with no recipe
-  throw new Error("Not found in InfiniBrowser API or local recipe.json backup");
+  throw new Error("Not found in local recipe.json backup or InfiniBrowser API");
 }
 
 /* -------------------------------------------------------------------------
